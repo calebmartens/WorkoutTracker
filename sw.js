@@ -1,5 +1,5 @@
 // Tally offline support. Change VERSION when you upload a new index.html.
-const VERSION = 'tally-v3';
+const VERSION = 'tally-v5';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -13,6 +13,11 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // The app page: try the network first so updates arrive, fall back to the saved copy offline.
+  // The app manifest: always check the network first so colour and icon changes reach the phone.
+  if (url.origin === location.origin && url.pathname.endsWith('manifest.webmanifest')) {
+    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return r; }).catch(() => caches.match(req)));
+    return;
+  }
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put('index.html', copy)); return r; }).catch(() => caches.match('index.html')));
     return;
