@@ -1,5 +1,5 @@
 // Tally offline support. Change VERSION when you upload a new index.html.
-const VERSION = 'tally-v5';
+const VERSION = 'tally-v6';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
