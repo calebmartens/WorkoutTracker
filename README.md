@@ -1,6 +1,6 @@
 # Tally Fitness
 
-Workout tracker and food diary with calorie and macro targets. It runs entirely in the browser: no account, no server, and each person's data stays on their own device.
+Workout tracker and food diary with calorie and macro targets. It runs in the browser, works offline, and can back up each person's data to their own account (Firebase).
 
 ## Put it on GitHub Pages
 
@@ -18,10 +18,29 @@ Once installed it opens full screen and works offline.
 
 ## Your data
 
-- Everything is saved on the device, in that browser. Nothing is uploaded anywhere.
-- Anyone you give the address to gets their own empty copy of the app. They can't see your data and you can't see theirs.
-- Use **Plan > Your data > Download backup** now and then. Use **Restore backup** to move your data to a new phone or recover it after clearing the browser.
+- Without an account, everything is saved on the device, in that browser.
+- **Plan > Your data > Create account or sign in** creates a free account. Everything already logged on that phone moves into the account, and from then on it's backed up to the cloud and available on any device you sign in on.
+- The app still works offline. Changes are saved on the phone and upload when you're back online.
+- Anyone you give the address to gets their own account. They can't see your data and you can't see theirs.
+- **Download backup** still works as an extra safety copy.
+
+## Firebase setup (already done for this app)
+
+The app uses the Firebase project `tally-82514`: Authentication with Email/Password, and a Firestore database. Each user's data is stored at `users/{uid}` (settings, workouts, foods) with one document per day under `users/{uid}/days/{date}`.
+
+Firestore rules (Firebase console > Firestore Database > Rules) must allow each user to reach only their own data:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
 
 ## Updating the app
 
-Replace `index.html` with the new version, then change `VERSION` at the top of `sw.js` (for example to `tally-v2`) and upload both. Installed copies pick up the update the next time they're opened online.
+Replace `index.html` with the new version, then change `VERSION` at the top of `sw.js` (for example to `tally-v9`) and upload both. Installed copies pick up the update the next time they're opened online.

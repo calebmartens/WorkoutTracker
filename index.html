@@ -20,6 +20,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
 /* Layout: single phone column, sticky title row, fixed bottom tab bar, bottom sheets for pickers.
    Macro colours follow calibrated Olympic plates: red 25 kg = protein, blue 20 kg = carbs, yellow 15 kg = fat, green 10 kg = fibre. */
@@ -832,7 +835,13 @@ try{const t=localStorage.getItem(KEY+'.tab');if(t&&['train','diary','history','p
 if(S.active) ui.inSession=true;
 
 /* ============================== PERSISTENCE ============================== */
+// Firebase project for the GitHub Pages version. These values are meant to be public;
+// Firestore security rules are what keep each person's data private.
+const FB_CONFIG={apiKey:"AIzaSyBwlx6iWlGRARfLhYIlaQEeEdy_xhEThoc",authDomain:"tally-82514.firebaseapp.com",projectId:"tally-82514",storageBucket:"tally-82514.firebasestorage.app",messagingSenderId:"408595756725",appId:"1:408595756725:web:fc58b9b5d49bac1ea7f0fc"};
+const ON_CLAUDE=!!(window.claude&&typeof window.claude.use==='function');
 let mainRef=null,cloudReady=false,sync='local',flushT=null,writing=Promise.resolve();
+let fbAuth=null,fdb=null,fbUser=null,connectT=null;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'.pending',JSON.stringify({main:dirtyMain,days:[...dirtyDays]}));}catch(e){}}
 function touchMain(){dirtyMain=true;saveLocal();schedule();}
 function touchDay(k){dirtyDays.add(k);saveLocal();schedule();}
@@ -840,56 +849,118 @@ function schedule(){clearTimeout(flushT);flushT=setTimeout(flush,700);}
 function mainBody(){const o={v:1,updated:Date.now()};for(const k of MAIN_KEYS)o[k]=S[k]??null;return clone(o);}
 async function write(ref,body){
   for(let i=0;i<2;i++){
-    try{ if(body)await ref.set(body); else await ref.delete(); return true; }
-    catch(e){ if(e&&e.code==='unavailable'&&i===0){await new Promise(r=>setTimeout(r,500+Math.random()*700));continue;} throw e; }
+    try{
+      // Firestore waits indefinitely while offline, so give up after a while and retry later.
+      const op=body?ref.set(body):ref.delete();
+      await Promise.race([op,sleep(12000).then(()=>{throw {code:'unavailable'};})]);
+      return true;
+    }
+    catch(e){ if(e&&e.code==='unavailable'&&i===0){await sleep(500+Math.random()*700);continue;} throw e; }
   }
 }
 function flush(){
   if(!cloudReady||!mainRef)return;
+  if(navigator.onLine===false){setSync('error');clearTimeout(flushT);flushT=setTimeout(flush,15000);return;}
   writing=writing.then(async()=>{
+    if(!cloudReady||!mainRef)return;
     setSync('syncing');
-    let ok=true;
-    if(dirtyMain){dirtyMain=false;try{await write(mainRef,mainBody());}catch(e){dirtyMain=true;ok=false;if(e&&e.code==='quota_exceeded')toast('Your cloud storage is full. Delete old entries to keep syncing.');}}
+    let ok=true,why='';
+    if(dirtyMain){dirtyMain=false;try{await write(mainRef,mainBody());}catch(e){dirtyMain=true;ok=false;why=e&&e.code;}}
     for(const k of [...dirtyDays]){
       dirtyDays.delete(k);
       const d=S.days[k];const ref=mainRef.collection('days').doc(k);
       const empty=!d||((!d.food||!d.food.length)&&(!d.sessions||!d.sessions.length));
-      try{await write(ref,empty?null:clone(Object.assign({food:d.food||[],sessions:d.sessions||[]},d.tg?{tg:d.tg}:{})));}catch(e){dirtyDays.add(k);ok=false;}
+      try{await write(ref,empty?null:clone(Object.assign({food:d.food||[],sessions:d.sessions||[]},d.tg?{tg:d.tg}:{})));}catch(e){dirtyDays.add(k);ok=false;why=why||(e&&e.code);}
     }
     saveLocal();
     setSync(ok?'cloud':'error');
+    if(why==='quota_exceeded'||why==='resource-exhausted')toast('Your cloud storage is full. Delete old entries to keep syncing.');
+    else if(why==='permission-denied')toast('Cloud sync was refused. Your changes are still saved on this phone.');
     if(!ok){clearTimeout(flushT);flushT=setTimeout(flush,15000);}
   });
 }
-function setSync(s){sync=s;const el=document.getElementById('syncPill');if(el)el.outerHTML=syncPill();}
-function syncPill(){const t={local:'Saved on this device',syncing:'Saving…',cloud:'Synced',error:'Offline – will retry'}[sync];return `<span class="pill ${sync}" id="syncPill"><i></i>${t}</span>`;}
-async function initCloud(){
-  if(!window.claude||typeof window.claude.use!=='function')return;
-  try{
-    const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
-    if(!db||!user)return;
-    const id=await user.id(); if(!id)return;
-    mainRef=db.doc('data/users/'+id+'/main');
-    setSync('syncing');
-    const snap=await mainRef.get();
-    if(snap.exists){
-      const m=snap.data()||{};
-      if(!dirtyMain){for(const k of MAIN_KEYS)if(m[k]!==undefined&&m[k]!==null)S[k]=clone(m[k]);if(m.active===null)S.active=null;}
-      const ds=await mainRef.collection('days').limit(1000).get();
-      const remote={};
-      ds.docs.forEach(d=>{const x=d.data();if(x){remote[d.id]={food:clone(x.food||[]),sessions:clone(x.sessions||[])};if(x.tg)remote[d.id].tg=clone(x.tg);}});
-      for(const k of dirtyDays){if(S.days[k])remote[k]=S.days[k];else delete remote[k];}
-      S.days=remote;
-      S.settings=Object.assign({units:'kg',hUnit:'cm',rest:90},S.settings||{});
-      S.profile=Object.assign({sex:'',age:null,height:null,weight:null,activity:'mod'},S.profile||{});
-      if(!S.active)ui.inSession=false;
-    }else{
-      dirtyMain=true;Object.keys(S.days).forEach(k=>dirtyDays.add(k));
-    }
-    cloudReady=true;saveLocal();render();
-    if(dirtyMain||dirtyDays.size)flush();else setSync('cloud');
-  }catch(e){setSync('local');}
+function setSync(s){sync=s;document.querySelectorAll('#syncPill').forEach(el=>{el.outerHTML=syncPill();});}
+function syncPill(){const t={local:'Saved on this device',syncing:'Saving…',cloud:'Synced',error:'Offline – will retry'}[sync];return `<span class="pill ${sync}" id="syncPill"${ON_CLAUDE?'':' data-act="account" role="button" tabindex="0"'}><i></i>${t}</span>`;}
+// Loads the cloud copy, keeps any local changes that haven't been uploaded yet, then uploads them.
+async function loadCloud(ref,maxDays){
+  mainRef=ref;
+  setSync('syncing');
+  const snap=await ref.get();
+  if(mainRef!==ref)return;
+  if(snap.exists){
+    const m=snap.data()||{};
+    if(!dirtyMain){for(const k of MAIN_KEYS)if(m[k]!==undefined&&m[k]!==null)S[k]=clone(m[k]);if(m.active===null)S.active=null;}
+    const ds=await ref.collection('days').limit(maxDays).get();
+    if(mainRef!==ref)return;
+    const remote={};
+    ds.docs.forEach(d=>{const x=d.data();if(x){remote[d.id]={food:clone(x.food||[]),sessions:clone(x.sessions||[])};if(x.tg)remote[d.id].tg=clone(x.tg);}});
+    for(const k of dirtyDays){if(S.days[k])remote[k]=S.days[k];else delete remote[k];}
+    S.days=remote;
+    S.settings=Object.assign({units:'kg',hUnit:'cm',rest:90},S.settings||{});
+    S.profile=Object.assign({sex:'',age:null,height:null,weight:null,activity:'mod'},S.profile||{});
+    if(!Array.isArray(S.meals))S.meals=[];
+    if(!S.uni||typeof S.uni!=='object')S.uni={};
+    ui.inSession=!!S.active;
+  }else{
+    // First time this account syncs: everything on this phone moves into it.
+    dirtyMain=true;Object.keys(S.days).forEach(k=>dirtyDays.add(k));
+  }
+  cloudReady=true;saveLocal();render();
+  if(dirtyMain||dirtyDays.size)flush();else setSync('cloud');
 }
+async function initCloud(){
+  if(ON_CLAUDE){
+    try{
+      const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+      if(!db||!user)return;
+      const id=await user.id(); if(!id)return;
+      await loadCloud(db.doc('data/users/'+id+'/main'),1000);
+    }catch(e){setSync('local');}
+    return;
+  }
+  initFirebase();
+}
+function storedUid(){try{return localStorage.getItem(KEY+'.uid');}catch(e){return null;}}
+function initFirebase(){
+  if(!window.firebase||typeof firebase.initializeApp!=='function'){
+    // Opened offline before the sign-in code was ever downloaded. Changes stay queued on the phone.
+    if(storedUid())setSync('error');
+    return;
+  }
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    fbAuth=firebase.auth();fdb=firebase.firestore();
+  }catch(e){fbAuth=null;fdb=null;return;}
+  if(storedUid())setSync('syncing');
+  fbAuth.onAuthStateChanged(u=>{
+    fbUser=u;
+    if(u){
+      const prev=storedUid();
+      if(prev&&prev!==u.uid){
+        // This phone's data belongs to a different account: start clean before loading this one.
+        S=defaults();dirtyMain=false;dirtyDays.clear();ui.inSession=false;stopRest();
+      }
+      try{localStorage.setItem(KEY+'.uid',u.uid);}catch(e){}
+      cloudReady=false;tryConnect();
+    }else{
+      mainRef=null;cloudReady=false;clearTimeout(connectT);setSync('local');
+    }
+    render();if(ui.sheet&&ui.sheet.type==='account')renderSheet();
+  });
+}
+async function tryConnect(){
+  clearTimeout(connectT);
+  if(!fbUser||!fdb||cloudReady)return;
+  const uid=fbUser.uid;
+  try{await loadCloud(fdb.collection('users').doc(uid),10000);}
+  catch(e){
+    if(!fbUser||fbUser.uid!==uid)return;
+    mainRef=null;setSync('error');
+    if(e&&e.code==='permission-denied')toast('Cloud sync was refused. Your data is still saved on this phone.');
+    connectT=setTimeout(tryConnect,20000);
+  }
+}
+window.addEventListener('online',()=>{if(fbUser&&!cloudReady)tryConnect();else flush();});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(flushT);flush();}});
 
 /* ============================== DOMAIN ============================== */
@@ -1233,12 +1304,78 @@ function vPlan(){
   <div class="field"><label for="${ft?'pHft':'pH'}">Height (${ft?'ft / in':'cm'}) <button class="link" style="padding:0;font-size:12px" data-act="hUnit">${ft?'use cm':'use ft/in'}</button></label>${ft?`<div class="row" style="gap:6px"><input class="inp num" id="pHft" inputmode="numeric" value="${hft}" placeholder="ft" data-ch="prof" data-k="hft"><input class="inp num" id="pHin" inputmode="numeric" value="${hin}" placeholder="in" data-ch="prof" data-k="hin"></div>`:`<input class="inp num" id="pH" inputmode="numeric" value="${hcm}" placeholder="e.g. 178" data-ch="prof" data-k="height">`}</div></div>
   <div class="field"><label>Activity level</label><div class="stack" style="gap:8px">${Object.entries(ACT).map(([k,a])=>`<button class="radio ${p.activity===k?'on':''}" data-act="activity" data-k="${k}" role="radio" aria-checked="${p.activity===k}"><span class="o"></span><span><b style="font-weight:600">${a.l}</b><small>${a.d}</small></span></button>`).join('')}</div></div></div>
   <div id="planResults">${planResults()}</div>
-  <div class="card stack"><h2>Your data</h2><div class="kv"><span>Saved</span><span class="muted" style="text-align:right">${mainRef?'Synced to your Claude account':'On this device only'}</span></div>
-  <p class="foot">${mainRef?'Download a backup to keep a copy, or to move your data to another version of the app.':'Your data never leaves this device. Download a backup now and then, and use it to restore your data on a new phone.'}</p>
-  <div class="grid2"><button class="btn" data-act="exportData">Download backup</button><button class="btn" data-act="importOpen">Restore backup</button></div>
+  ${dataCard()}
   <input type="file" id="importFile" accept=".json,application/json" hidden data-ch="importFile">
   <button class="btn danger block" data-act="resetAll">Erase all data</button></div></div>`;
   return h;
+}
+function dataCard(){
+  let h=`<div class="card stack"><h2>Your data</h2>`;
+  if(ON_CLAUDE){
+    h+=`<div class="kv"><span>Saved</span><span class="muted" style="text-align:right">${mainRef?'Synced to your Claude account':'On this device only'}</span></div>
+  <p class="foot">${mainRef?'Download a backup to keep a copy, or to move your data to another version of the app.':'Your data never leaves this device. Download a backup now and then, and use it to restore your data on a new phone.'}</p>`;
+  }else if(fbUser){
+    h+=`<div class="kv"><span>Account</span><span class="muted" style="text-align:right;overflow-wrap:anywhere">${esc(fbUser.email||'Signed in')}</span></div>
+  <div class="kv"><span>Saved</span><span class="muted" style="text-align:right">${cloudReady?'Backed up to your account':'On this phone, uploads when online'}</span></div>
+  <p class="foot">Everything you log is saved to your account, so it's safe if you clear your browser or change phone. Sign in with the same email on any device to see it.</p>
+  <button class="btn block" data-act="account">Manage account</button>`;
+  }else{
+    h+=`<div class="kv"><span>Saved</span><span class="muted" style="text-align:right">On this device only</span></div>
+  <p class="foot">Create a free account to back up everything to the cloud and use it on any phone. Anything you've already logged on this phone moves into your account.</p>
+  <button class="btn primary block" data-act="account">Create account or sign in</button>`;
+  }
+  h+=`<div class="grid2"><button class="btn" data-act="exportData">Download backup</button><button class="btn" data-act="importOpen">Restore backup</button></div>`;
+  return h;
+}
+const AUTH_MSG={
+  'auth/invalid-email':'That email address doesn\'t look right.',
+  'auth/missing-email':'Enter your email address.',
+  'auth/missing-password':'Enter your password.',
+  'auth/user-not-found':'Wrong email or password.',
+  'auth/wrong-password':'Wrong email or password.',
+  'auth/invalid-credential':'Wrong email or password.',
+  'auth/invalid-login-credentials':'Wrong email or password.',
+  'auth/email-already-in-use':'There\'s already an account with that email. Sign in instead.',
+  'auth/weak-password':'Use a password with at least 6 characters.',
+  'auth/network-request-failed':'No internet connection. Try again when you\'re online.',
+  'auth/too-many-requests':'Too many attempts. Wait a few minutes and try again.',
+  'auth/operation-not-allowed':'Email sign-in isn\'t switched on for this app yet.',
+  'auth/requires-recent-login':'For safety, sign out and back in, then try again.'
+};
+function authErr(e){return AUTH_MSG[e&&e.code]||'Something went wrong. Try again.';}
+function shAccount(){
+  const s=ui.sheet;
+  const err=s.err?`<p class="note" style="background:color-mix(in srgb,var(--bad) 14%,transparent)">${esc(s.err)}</p>`:'';
+  const info=s.info?`<p class="note" style="background:color-mix(in srgb,var(--good) 14%,transparent)">${esc(s.info)}</p>`:'';
+  if(!fbAuth)return `<div class="sh-h"><div class="grab"></div><h3>Account</h3></div><div class="sh-b stack">
+  <p class="foot">Signing in needs an internet connection. Your data is still being saved on this phone. Connect to the internet, close the app and open it again, then try again.</p>
+  <button class="btn block" data-act="closeSheet">Close</button></div>`;
+  if(fbUser){
+    const unsynced=dirtyMain||dirtyDays.size;
+    return `<div class="sh-h"><div class="grab"></div><h3>Your account</h3></div><div class="sh-b stack">
+  <div class="kv"><span>Signed in as</span><span class="muted" style="text-align:right;overflow-wrap:anywhere">${esc(fbUser.email||'')}</span></div>
+  <div class="kv"><span>Status</span><span class="muted" style="text-align:right">${cloudReady&&!unsynced?'Everything is backed up':cloudReady?'Uploading changes…':'Waiting for internet'}</span></div>
+  ${err}${info}
+  <button class="btn block" data-act="accSignOut" ${s.busy?'disabled':''}>Sign out</button>
+  <p class="foot">Signing out removes your data from this phone. It stays in your account, and comes back when you sign in again.</p>
+  <button class="btn danger block" data-act="accDelete" ${s.busy?'disabled':''}>Delete account and all data</button>
+  <button class="btn ghost block" data-act="closeSheet">Close</button></div>`;
+  }
+  const m=s.mode||'signin';
+  const title=m==='signup'?'Create account':m==='reset'?'Reset password':'Sign in';
+  return `<div class="sh-h"><div class="grab"></div><h3>${title}</h3></div><div class="sh-b stack">
+  ${m==='signin'?'<p class="foot">Sign in to back up your workouts and food diary and keep them on any phone.</p>':m==='signup'?'<p class="foot">Your workouts and food diary on this phone will move into your new account.</p>':'<p class="foot">Enter your email and we\'ll send you a link to choose a new password.</p>'}
+  <div class="field"><label for="accEmail">Email</label><input class="inp" id="accEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" value="${esc(s.email||'')}" data-in="accEmail" data-autofocus></div>
+  ${m!=='reset'?`<div class="field"><label for="accPw">Password</label><input class="inp" id="accPw" type="password" autocomplete="${m==='signup'?'new-password':'current-password'}" value="${esc(s.pw||'')}" data-in="accPw" placeholder="${m==='signup'?'At least 6 characters':''}"></div>`:''}
+  ${err}${info}
+  <button class="btn primary block" data-act="accSubmit" ${s.busy?'disabled':''}>${s.busy?'Please wait…':m==='signup'?'Create account':m==='reset'?'Send reset link':'Sign in'}</button>
+  ${m==='signin'?`<button class="link" data-act="accMode" data-m="reset" style="align-self:center">Forgot password?</button><button class="btn block" data-act="accMode" data-m="signup">New here? Create an account</button>`:`<button class="btn block" data-act="accMode" data-m="signin">${m==='signup'?'Already have an account? Sign in':'Back to sign in'}</button>`}
+  <button class="btn ghost block" data-act="closeSheet">Not now</button></div>`;
+}
+async function accDeleteData(ref){
+  const ds=await ref.collection('days').get();
+  for(const d of ds.docs)await d.ref.delete();
+  await ref.delete();
 }
 function planResults(){
   const tg=targets();const p=S.profile;
@@ -1267,6 +1404,7 @@ function renderSheet(){
   else if(s.type==='customFood')el.innerHTML=shCustomFood();
   else if(s.type==='summary')el.innerHTML=shSummary();
   else if(s.type==='import')el.innerHTML=shImport();
+  else if(s.type==='account')el.innerHTML=shAccount();
   else if(s.type==='review')el.innerHTML=shReview();
   else if(s.type==='saveMeal')el.innerHTML=shSaveMeal();
   else if(s.type==='mealEdit')el.innerHTML=shMealEdit();
@@ -1773,6 +1911,54 @@ const A={
   histBack(){ui.histEx=null;render();},
   toggleSess(el){ui.openSess=ui.openSess===el.dataset.id?null:el.dataset.id;render();},
   delSess(el){if(!armed(el,'Tap again to delete'))return;const d=S.days[el.dataset.day];if(d){d.sessions=d.sessions.filter(s=>s.id!==el.dataset.id);touchDay(el.dataset.day);}render();toast('Workout deleted');},
+  account(){openSheet({type:'account',mode:'signin',email:'',pw:''});},
+  accMode(el){const s=ui.sheet;s.mode=el.dataset.m;s.err='';s.info='';renderSheet();},
+  async accSubmit(){
+    const s=ui.sheet;if(!s||s.busy||!fbAuth)return;
+    const email=(s.email||'').trim(),pw=s.pw||'',m=s.mode||'signin';
+    if(!email){s.err='Enter your email address.';renderSheet();return;}
+    if(m!=='reset'&&!pw){s.err='Enter your password.';renderSheet();return;}
+    s.busy=true;s.err='';s.info='';renderSheet();
+    try{
+      if(m==='reset'){await fbAuth.sendPasswordResetEmail(email);s.busy=false;s.mode='signin';s.info='Check your email for a link to reset your password. It can take a few minutes, and may land in spam.';renderSheet();return;}
+      if(m==='signup')await fbAuth.createUserWithEmailAndPassword(email,pw);
+      else await fbAuth.signInWithEmailAndPassword(email,pw);
+      s.busy=false;s.pw='';
+      if(ui.sheet===s)closeSheet();
+      toast(m==='signup'?'Account created. Your data is backing up.':'Signed in');
+    }catch(e){s.busy=false;s.err=authErr(e);if(ui.sheet===s)renderSheet();}
+  },
+  async accSignOut(el){
+    const s=ui.sheet;if(!fbAuth||!fbUser||s.busy)return;
+    if(!armed(el,'Tap again to sign out'))return;
+    s.busy=true;s.err='';renderSheet();
+    clearTimeout(flushT);flush();
+    await Promise.race([writing,sleep(15000)]);
+    if(dirtyMain||dirtyDays.size){s.busy=false;s.err='Some changes haven\'t uploaded yet, so signing out now would lose them. Connect to the internet and try again.';renderSheet();return;}
+    try{await fbAuth.signOut();}catch(e){s.busy=false;s.err=authErr(e);renderSheet();return;}
+    S=defaults();dirtyMain=false;dirtyDays.clear();ui.edit=null;ui.inSession=false;stopRest();
+    try{localStorage.removeItem(KEY+'.uid');}catch(e){}
+    saveLocal();closeSheet();render();toast('Signed out');
+  },
+  async accDelete(el){
+    const s=ui.sheet;if(!fbAuth||!fbUser||s.busy)return;
+    if(!armed(el,'Tap again to delete everything for good'))return;
+    s.busy=true;s.err='';renderSheet();
+    const u=fbUser;
+    try{
+      clearTimeout(flushT);cloudReady=false;
+      await accDeleteData(fdb.collection('users').doc(u.uid));
+      await u.delete();
+    }catch(e){
+      s.busy=false;
+      s.err=e&&e.code==='auth/requires-recent-login'?'For safety, sign out, sign back in, then delete your account straight away.':(e&&e.code&&e.code.startsWith('auth/')?authErr(e):'Couldn\'t delete your account. Check your internet connection and try again.');
+      if(fbUser){cloudReady=false;tryConnect();}
+      renderSheet();return;
+    }
+    S=defaults();dirtyMain=false;dirtyDays.clear();ui.edit=null;ui.inSession=false;stopRest();
+    try{localStorage.removeItem(KEY+'.uid');}catch(e){}
+    saveLocal();closeSheet();render();toast('Account and data deleted');
+  },
   exportData(){exportData();},
   importOpen(){const f=$('#importFile');if(f){f.value='';f.click();}},
   importApply(){
@@ -1801,6 +1987,8 @@ const IN={
   foodQ(el){ui.sheet.q=el.value;renderResults();},
   rvG(el){const s=ui.sheet,x=+el.dataset.i,v=parseNum(el.value),i=s.items[x];const ok=v!=null&&!isNaN(v)&&v>0&&v<=5000;el.classList.toggle('bad',!ok&&el.value.trim()!=='');i.g=ok?v/s.mult:0;const k=$('#rvk-'+x);if(k)k.textContent=macroLine(itemsTotals([Object.assign({},i,{on:true})],s.mult));rvRefresh();},
   smName(el){ui.sheet.name=el.value;},
+  accEmail(el){ui.sheet.email=el.value;},
+  accPw(el){ui.sheet.pw=el.value;},
   draftName(el){ui.draft.n=el.value;},
   draftG(el){const d=ui.draft,x=+el.dataset.i,v=parseNum(el.value),ok=v!=null&&!isNaN(v)&&v>0&&v<=5000;el.classList.toggle('bad',!ok&&el.value.trim()!=='');d.items[x].g=ok?v:0;const k=$('#dmk-'+x);if(k)k.textContent=macroLine(itemsTotals([d.items[x]],1));const t=$('#dmTot');if(t)t.innerHTML=tiles(itemsTotals(d.items,1));},
   qAmt(el){const v=parseNum(el.value);ui.sheet.amt=v==null||isNaN(v)?0:v;el.classList.remove('bad');$('#qPrev').innerHTML=qtyPreview();}
@@ -1824,6 +2012,8 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&ui.sheet){closeSheet();return;}
   if(e.key==='Enter'&&e.target.id==='foodQ'){e.preventDefault();e.target.blur();}
   if(e.key==='Enter'&&e.target.id==='qAmt'){e.preventDefault();A.qtySave();}
+  if(e.key==='Enter'&&(e.target.id==='accPw'||(e.target.id==='accEmail'&&ui.sheet&&ui.sheet.mode==='reset'))){e.preventDefault();A.accSubmit();}
+  if((e.key==='Enter'||e.key===' ')&&e.target.id==='syncPill'&&!ON_CLAUDE){e.preventDefault();A.account();}
 });
 
 /* ============================== SWIPE BETWEEN SECTIONS ============================== */
