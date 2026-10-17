@@ -28,7 +28,9 @@ Once installed it opens full screen and works offline.
 
 The app uses the Firebase project `tally-82514`: Authentication with Email/Password, and a Firestore database. Each user's data is stored at `users/{uid}` (settings, workouts, foods) with one document per day under `users/{uid}/days/{date}`.
 
-Firestore rules (Firebase console > Firestore Database > Rules) must allow each user to reach only their own data:
+Scanned products that people enter from the label are shared in `barcodes/{barcode}`, so anyone signed in can scan them.
+
+Firestore rules (Firebase console > Firestore Database > Rules): each user reaches only their own data, everyone signed in can read shared barcodes, and only the person who added a barcode can change it:
 
 ```
 rules_version = '2';
@@ -37,10 +39,24 @@ service cloud.firestore {
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    match /barcodes/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && code.matches('^[0-9]{6,14}$') && validFood();
+      allow update: if request.auth != null && resource.data.by == request.auth.uid && validFood();
+      function validFood() {
+        let d = request.resource.data;
+        return d.by == request.auth.uid
+          && d.keys().hasOnly(['n','kcal','p','c','f','fib','sl','sg','by','at'])
+          && d.n is string && d.n.size() > 0 && d.n.size() <= 60
+          && d.kcal is number && d.kcal >= 0 && d.kcal <= 950
+          && d.p is number && d.p >= 0 && d.c is number && d.c >= 0 && d.f is number && d.f >= 0
+          && d.p + d.c + d.f <= 101;
+      }
+    }
   }
 }
 ```
 
 ## Updating the app
 
-Replace `index.html` with the new version, then change `VERSION` at the top of `sw.js` (for example to `tally-v9`) and upload both. Installed copies pick up the update the next time they're opened online.
+Replace `index.html` with the new version, then change `VERSION` at the top of `sw.js` (for example to `tally-v10`) and upload both. Installed copies pick up the update the next time they're opened online.

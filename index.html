@@ -37,11 +37,12 @@
   --f-display:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mc-Breakfast{--mc:#F2994A}:root:not([data-theme="light"]) .mc-Lunch{--mc:#2CC4CF}:root:not([data-theme="light"]) .mc-Dinner{--mc:#8E8AF5}:root:not([data-theme="light"]) .mc-Snacks{--mc:#EE6FB0}:root:not([data-theme="light"]) .hero{background:radial-gradient(120% 140% at 100% 0%,#5E2232 0%,rgba(94,34,50,0) 55%),linear-gradient(150deg,#232C3D 0%,#181E2A 100%)}:root:not([data-theme="light"]){
   --bg:#0D1015; --surface:#161A21; --sunk:#1F242D; --line:#2A303B; --ink:#E9EDF3; --muted:#909AAA;
   --btn:#E9EDF3; --btn-ink:#0D1015; --accent:#EF545C; --accent-ink:#0D1015;
   --pro:#F06A70; --carb:#6593F5; --fat:#EDC03A; --fib:#4FC17E;
   --good:#4FC17E; --warn:#E2A04A; --bad:#EF545C; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"] .mc-Breakfast{--mc:#F2994A}:root[data-theme="dark"] .mc-Lunch{--mc:#2CC4CF}:root[data-theme="dark"] .mc-Dinner{--mc:#8E8AF5}:root[data-theme="dark"] .mc-Snacks{--mc:#EE6FB0}:root[data-theme="dark"] .hero{background:radial-gradient(120% 140% at 100% 0%,#5E2232 0%,rgba(94,34,50,0) 55%),linear-gradient(150deg,#232C3D 0%,#181E2A 100%)}
 :root[data-theme="dark"]{
   --bg:#0D1015; --surface:#161A21; --sunk:#1F242D; --line:#2A303B; --ink:#E9EDF3; --muted:#909AAA;
   --btn:#E9EDF3; --btn-ink:#0D1015; --accent:#EF545C; --accent-ink:#0D1015;
@@ -262,6 +263,42 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 .sh-h{padding:14px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
 .sh-b{overflow-y:auto;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));-webkit-overflow-scrolling:touch}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
+.sh-h{flex:none}
+.sh-b{flex:1 1 auto;min-height:0;overscroll-behavior:contain}
+/* The add-food flow always fills the screen, so it doesn't jump between heights as you move through it */
+.sheet.full{top:calc(env(safe-area-inset-top,0px) + 10px);max-height:none}
+/* Meal colours */
+.meal-card{position:relative;overflow:hidden;padding-left:18px}
+.meal-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--mc)}
+.meal-ic{width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--mc) 16%,transparent);color:var(--mc);flex:none}
+.meal-ic svg{width:17px;height:17px}
+.meal-h h3{display:flex;align-items:center;gap:10px}
+.meal-h .mk{font-weight:600;color:var(--mc);font-size:14px}
+.add-food{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:999px;font-weight:600;font-size:14px;background:color-mix(in srgb,var(--mc) 14%,transparent);color:var(--mc)}
+.mc-Breakfast{--mc:#D9741C}.mc-Lunch{--mc:#0E8F9C}.mc-Dinner{--mc:#5550D4}.mc-Snacks{--mc:#C93A86}
+/* Hero calorie card: dark gradient in both themes */
+.hero{--ink:#FFFFFF;--muted:#B8C1CF;--line:rgba(255,255,255,.14);--sunk:rgba(255,255,255,.13);--btn:#FFFFFF;--btn-ink:#121821;
+  --pro:#FF7A80;--carb:#7EA6FF;--fat:#F5C842;--fib:#5FD38F;--good:#5FD38F;--warn:#F2AE55;--bad:#FF6B72;
+  color:var(--ink);border:0;background:radial-gradient(120% 140% at 100% 0%,#5B2333 0%,rgba(91,35,51,0) 55%),linear-gradient(150deg,#1E2635 0%,#131824 100%)}
+.hero .kbar i{background:linear-gradient(90deg,#FF7A80,#F5C842)}
+.hero .kbar i.over{background:var(--bad)}
+/* Food sheet tabs */
+.seg.tabs button.on{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+/* Calendar */
+.cal-h{display:flex;align-items:center;gap:8px}
+.cal-h b{flex:1;text-align:center;font-size:16px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal .dow{font-size:12px;color:var(--muted);text-align:center;font-weight:600;padding-bottom:2px}
+.cal button{aspect-ratio:1;border-radius:10px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:600;font-variant-numeric:tabular-nums;font-size:15px;position:relative}
+.cal button.good{background:color-mix(in srgb,var(--good) 20%,var(--surface));border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+.cal button.warn{background:color-mix(in srgb,var(--warn) 20%,var(--surface));border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.cal button.bad{background:color-mix(in srgb,var(--bad) 18%,var(--surface));border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.cal button.logged{background:var(--sunk)}
+.cal button.today{outline:2px solid var(--ink);outline-offset:-2px}
+.cal button:disabled{opacity:.35;cursor:default}
+.cal button i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.cal button i.no{background:transparent}
+.cal .pad{visibility:hidden}
 .preview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
 .preview div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px}
 .preview b{display:block;font-family:var(--f-display);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
@@ -1148,11 +1185,11 @@ function vDiary(){
   const k=ui.date,d=day(k),plan=dayPlan(k),t=totals(d.food);
   let h=`<div class="hdr"><h1>Diary</h1>${syncPill()}</div>${ui.fromProgress?`<button class="link" data-act="backToProgress" style="margin:-4px 0 6px">‹ Back to progress</button>`:''}
   <div class="daynav"><button class="icon-btn" data-act="dayShift" data-d="-1" aria-label="Previous day">${ICON.back}</button><span class="lbl">${dayLabel(k)}${k===todayKey()?'':` <button class="link" data-act="dayToday">Jump to today</button>`}</span><button class="icon-btn" data-act="dayShift" data-d="1" aria-label="Next day">${ICON.fwd}</button></div>
-  <div class="card" style="margin-top:10px">`;
+  <div class="card hero" style="margin-top:10px">`;
   if(plan){
     const rem=plan.kcal-t.kcal;const pct=t.kcal/plan.kcal;
     h+=`<div class="kcal-top"><div><h2>Calories · ${GOALS[plan.goal||S.goal].l}</h2><div class="big" style="margin-top:6px">${fint(t.kcal)}<small>/ ${fint(plan.kcal)}</small></div></div><div style="text-align:right"><div class="big" style="font-size:30px;color:${rem<0?'var(--bad)':'var(--ink)'}">${fint(Math.abs(rem))}</div><span class="muted" style="font-size:13px">${rem<0?'kcal over':'kcal left'}</span></div></div>
-    <div class="bar" style="margin-top:12px"><i style="width:${Math.min(100,pct*100)}%;background:${pct>1.08?'var(--bad)':'var(--btn)'}"></i></div>
+    <div class="bar kbar" style="margin-top:12px;height:10px;border-radius:5px"><i class="${pct>1.08?'over':''}" style="width:${Math.min(100,pct*100)}%;border-radius:5px"></i></div>
     <div class="macros">${macBar('Protein','pro',t.p,plan.p)}${macBar('Carbs','carb',t.c,plan.c)}${macBar('Fat','fat',t.f,plan.f)}${macBar('Fibre','fib',t.fib,plan.fib)}</div>
     <div class="ins">${insights(t,plan,k).map(i=>`<div class="${i.t}"><i></i><span>${i.m}</span></div>`).join('')}</div>`;
   }else{
@@ -1163,12 +1200,18 @@ function vDiary(){
   h+=`</div><div class="stack" style="margin-top:12px">`;
   for(const m of MEALS){
     const list=d.food.filter(e=>e.meal===m);const mt=totals(list);
-    h+=`<div class="card"><div class="meal-h"><h3>${m}</h3><span class="num">${list.length?fint(mt.kcal)+' kcal':''}</span></div>`;
-    for(const e of list){const x=entryMac(e);h+=`<button class="entry" data-act="editEntry" data-id="${e.id}"><span class="grow"><b>${esc(e.n)}</b><small class="num">${esc(amtText(e))} · P ${fmt(x.p,0)} · C ${fmt(x.c,0)} · F ${fmt(x.f,0)}</small></span><span class="k">${fint(x.kcal)}</span></button>`;}
-    h+=`<div class="meal-acts"><button class="link" data-act="openFoodPicker" data-meal="${m}">+ Add food</button><button class="link" data-act="copyOpen" data-meal="${m}">Copy from another day</button>${list.length?`<button class="link" data-act="saveMealOpen" data-meal="${m}">Save as meal</button>`:''}</div></div>`;
+    h+=`<div class="card meal-card mc-${m}"><div class="meal-h"><h3><span class="meal-ic">${MEAL_IC[m]}</span>${m}</h3><span class="num mk">${list.length?fint(mt.kcal)+' kcal':''}</span></div>`;
+    for(const e of list){const x=entryMac(e);h+=`<button class="entry" data-act="editEntry" data-id="${e.id}"><span class="grow"><b>${esc(e.n)}</b><small class="num">${esc(amtText(e))}</small></span><span class="k">${fint(x.kcal)}</span></button>`;}
+    h+=`<div class="meal-acts" style="align-items:center;margin-top:${list.length?8:6}px"><button class="add-food" data-act="openFoodPicker" data-meal="${m}">+ Add food</button>${list.length?`<button class="link" data-act="saveMealOpen" data-meal="${m}">Save as meal</button>`:''}</div></div>`;
   }
   return h+`</div>`;
 }
+const MEAL_IC={
+  Breakfast:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="4"/><path d="M12 3v2M4.9 6.9l1.4 1.4M3 13h2M19 13h2M17.7 8.3l1.4-1.4M3 20h18"/></svg>',
+  Lunch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 7c0-1.5 1-1.5 1-3M12 7c0-1.5 1-1.5 1-3M16 7c0-1.5 1-1.5 1-3"/></svg>',
+  Dinner:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>',
+  Snacks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7c-4-3-8 0-8 5s3 9 5 9c1.3 0 2-.6 3-.6s1.7.6 3 .6c2 0 5-4 5-9s-4-8-8-5Z"/><path d="M12 7c0-2 1-4 3-4"/></svg>'
+};
 function amtText(e){return e.mode==='s'&&e.sl?`${fmt(e.amt,2)} × ${e.sl} (${fmt(e.g,0)} g)`:`${fmt(e.g,0)} g`;}
 function macBar(l,c,v,t){const pct=t?v/t:0;const over=c!=='pro'&&c!=='fib'&&pct>1.15;return `<div class="mac"><div class="row"><b><span class="sw" style="background:var(--${c})"></span>${l}</b><span class="num">${fmt(v,0)} / ${t} g</span></div><div class="bar"><i style="width:${Math.min(100,pct*100)}%;background:${over?'var(--bad)':'var(--'+c+')'}"></i></div></div>`;}
 function insights(t,p,k){
@@ -1264,8 +1307,8 @@ function foodLine(k,label){
   return `<button class="nrow" data-act="openDiary" data-k="${k}"><span class="grow"><b>${label} · ${dayLabel(k)}</b>${det?'<br>'+det:''}<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${statusPill(st)}${hitChips(st)}</span></span>${ICON.fwd.replace('<svg','<svg width="18" height="18"')}</button>`;
 }
 function vNutrition(){
-  const today=todayKey(),n=ui.nDays||14,days=[];
-  for(let i=0;i<n;i++)days.push(addDays(today,-i));
+  const today=todayKey(),days=[];
+  for(let i=0;i<14;i++)days.push(addDays(today,-i));
   const wk=days.slice(0,7).map(k=>({k,st:dayStatus(k)})),logged=wk.filter(x=>x.st.t&&x.st.p);
   const sessDays=new Set(allSessions().map(s=>s.day));
   if(!targets()&&!Object.values(S.days).some(d=>d.food&&d.food.length))
@@ -1281,13 +1324,33 @@ function vNutrition(){
   const strip=days.slice(0,14).reverse();
   h+=`<div class="strip" role="list">${strip.map(k=>{const st=dayStatus(k);const r=st.r!=null?Math.min(st.r,1.5):0;const c=ST[st.state][1];return `<button class="sc" role="listitem" data-act="openDiary" data-k="${k}" aria-label="${dayLabel(k)}: ${ST[st.state][0]}"><span class="sb"><span class="tl"></span><i class="${c}" style="height:${(r/1.5*100).toFixed(0)}%"></i></span><span class="sd">${parseKey(k).toLocaleDateString(undefined,{weekday:'narrow'})}</span><span class="sw2">${sessDays.has(k)?'<i></i>':''}</span></button>`;}).join('')}</div>
   <div class="legend"><span><i class="good"></i>On target</span><span><i class="warn"></i>Under</span><span><i class="bad"></i>Over</span><span><i class="wd"></i>Workout day</span><span>Line = calorie target</span></div></div>
-  <div class="sec-h"><h2>Day by day</h2><span class="muted" style="font-size:13px">Tap a day to open its diary</span></div><div class="card" style="padding-block:2px">`;
-  for(const k of days){
+  <div class="sec-h"><h2>This week</h2><button class="link" data-act="calOpen">Earlier days</button></div><div class="card" style="padding-block:2px">`;
+  for(const k of days.slice(0,7)){
     const st=dayStatus(k),ws=allSessions().filter(s=>s.day===k).map(s=>s.name);
     h+=`<button class="nrow" data-act="openDiary" data-k="${k}"><span class="grow"><b>${dayLabel(k)}</b>${ws.length?` <span class="tag">${esc(ws.join(', '))}</span>`:''}<br>${st.t?`<span class="muted num" style="font-size:13px">${fint(st.t.kcal)}${st.p?' / '+fint(st.p.kcal):''} kcal · P ${fmt(st.t.p,0)} · C ${fmt(st.t.c,0)} · F ${fmt(st.t.f,0)} g</span>`:''}<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${statusPill(st)}${hitChips(st)}</span></span>${ICON.fwd.replace('<svg','<svg width="18" height="18"')}</button>`;
   }
-  h+=`</div>${n<90?`<button class="btn block" data-act="moreDays">Show ${n<30?30:90} days</button>`:''}`;
+  h+=`</div><button class="btn block" data-act="calOpen">Open calendar to see earlier days</button>`;
   return h;
+}
+
+function shCal(){
+  const s=ui.sheet,[y,m]=s.month.split('-').map(Number),first=new Date(y,m-1,1),today=todayKey();
+  const nDays=new Date(y,m,0).getDate(),lead=(first.getDay()+6)%7;
+  const sessDays=new Set(allSessions().map(x=>x.day));
+  const thisMonth=today.slice(0,7)===s.month;
+  let cells='';
+  for(let i=0;i<lead;i++)cells+=`<span class="pad"></span>`;
+  for(let d=1;d<=nDays;d++){
+    const k=s.month+'-'+String(d).padStart(2,'0'),fut=k>today,st=fut?{state:'none'}:dayStatus(k);
+    const cls=st.state==='notarget'?'logged':ST[st.state][1];
+    cells+=`<button class="${cls} ${k===today?'today':''}" data-act="calPick" data-k="${k}" ${fut?'disabled':''} aria-label="${parseKey(k).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}: ${ST[st.state][0]}${sessDays.has(k)?', workout':''}">${d}<i class="${sessDays.has(k)?'':'no'}"></i></button>`;
+  }
+  const label=first.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  return `<div class="sh-h"><div class="grab"></div><div class="row between"><h3>Pick a day</h3><button class="btn sm" data-act="closeSheet">Close</button></div>
+  <div class="cal-h"><button class="icon-btn" data-act="calMonth" data-d="-1" aria-label="Previous month">${ICON.back}</button><b>${label}</b><button class="icon-btn" data-act="calMonth" data-d="1" aria-label="Next month" ${thisMonth?'disabled':''}>${ICON.fwd}</button></div></div>
+  <div class="sh-b stack"><div class="cal">${['M','T','W','T','F','S','S'].map(x=>`<span class="dow">${x}</span>`).join('')}${cells}</div>
+  <div class="legend"><span><i class="good"></i>On target</span><span><i class="warn"></i>Under</span><span><i class="bad"></i>Over</span><span><i class="wd"></i>Workout day</span></div>
+  <p class="foot">Tap a day to open its food diary.</p></div>`;
 }
 
 /* ---------- Plan ---------- */
@@ -1392,11 +1455,13 @@ function planResults(){
 }
 
 /* ============================== SHEETS ============================== */
+const FULL_SHEETS=new Set(['food','qty','customFood','scan','review','copy','saveMeal','mealEdit']);
 function openSheet(s){ui.sheet=s;renderSheet();$('#sheetWrap').hidden=false;document.body.style.overflow='hidden';const b=document.querySelector('#sheet .sh-b');if(b)b.scrollTop=0;}
 function closeSheet(){stopScan();ui.sheet=null;$('#sheetWrap').hidden=true;document.body.style.overflow='';}
 function renderSheet(){
   const s=ui.sheet;if(!s)return;const el=$('#sheet');
   stopScan();
+  el.classList.toggle('full',FULL_SHEETS.has(s.type));
   if(s.type==='ex')el.innerHTML=shEx();
   else if(s.type==='newEx')el.innerHTML=shNewEx();
   else if(s.type==='food')el.innerHTML=shFood();
@@ -1405,6 +1470,7 @@ function renderSheet(){
   else if(s.type==='summary')el.innerHTML=shSummary();
   else if(s.type==='import')el.innerHTML=shImport();
   else if(s.type==='account')el.innerHTML=shAccount();
+  else if(s.type==='cal')el.innerHTML=shCal();
   else if(s.type==='review')el.innerHTML=shReview();
   else if(s.type==='saveMeal')el.innerHTML=shSaveMeal();
   else if(s.type==='mealEdit')el.innerHTML=shMealEdit();
@@ -1445,7 +1511,8 @@ function shNewEx(){
 function shFood(){
   const s=ui.sheet,draft=s.ctx==='draft',tab=draft?'search':(s.tab||'search'),nm=(S.meals||[]).length;
   return `<div class="sh-h"><div class="grab"></div><div class="row between"><h3>${draft?'Add food to your meal':'Add to '+esc(s.meal)}</h3><button class="btn sm" data-act="${draft?'backToDraft':'closeSheet'}">${draft?'Back':'Close'}</button></div>
-  ${draft?'':`<div class="seg"><button class="${tab==='search'?'on':''}" data-act="foodTab" data-t="search">Search</button><button class="${tab==='meals'?'on':''}" data-act="foodTab" data-t="meals">Saved meals${nm?' ('+nm+')':''}</button><button class="${tab==='mine'?'on':''}" data-act="foodTab" data-t="mine">My foods</button></div>`}
+  ${draft?'':`<div class="seg tabs"><button class="${tab==='search'?'on':''}" data-act="foodTab" data-t="search">Search</button><button class="${tab==='meals'?'on':''}" data-act="foodTab" data-t="meals">Meals${nm?' ('+nm+')':''}</button><button class="${tab==='mine'?'on':''}" data-act="foodTab" data-t="mine">My foods</button><button class="${tab==='past'?'on':''}" data-act="foodTab" data-t="past">Past days</button></div>`}
+  ${tab==='past'?`<div class="seg">${MEALS.map(m=>`<button class="${(s.src||s.meal)===m?'on':''}" data-act="pastSrc" data-m="${m}">${m==='Breakfast'?'Bkfst':m}</button>`).join('')}</div>`:''}
   ${tab==='search'?`<div class="row"><input class="inp grow" id="foodQ" type="search" placeholder="Search ${allFoods().length} foods" value="${esc(s.q||'')}" data-in="foodQ" autocomplete="off" data-autofocus>${canScan?`<button class="btn" data-act="scanOpen" aria-label="Scan a barcode">${ICON.barcode}Scan</button>`:''}</div>`:''}</div>
   <div class="sh-b" id="results"></div>`;
 }
@@ -1457,6 +1524,7 @@ function foodResults(){
   const s=ui.sheet,tab=s.ctx==='draft'?'search':(s.tab||'search');
   if(tab==='meals')return mealsList();
   if(tab==='mine')return myFoods();
+  if(tab==='past')return pastDays();
   const toks=qTokens(s.q||'');let h='';
   if(!toks.length){
     const rec=(S.recent||[]).map(foodById).filter(Boolean).slice(0,12);
@@ -1526,6 +1594,12 @@ function shMealEdit(){
   ${d.isNew?'':'<button class="btn danger block" data-act="draftDelete">Delete meal</button>'}</div>`;
 }
 function draftReturn(){const r=ui.draftReturn;ui.draftReturn=null;ui.draft=null;if(r&&r.type==='food'){r.tab='meals';ui.sheet=r;renderSheet();}else closeSheet();}
+function pastDays(){
+  const s=ui.sheet,src=s.src||s.meal,list=copySources(src);
+  const when=dayLabel(ui.date)==='Today'?'today':dayLabel(ui.date);
+  if(!list.length)return `<div class="empty"><h3>Nothing to copy</h3><p>No ${src.toLowerCase()} was logged in the 30 days before ${when}. Pick a different meal above.</p></div>`;
+  return `<p class="muted" style="font-size:13px;margin-bottom:4px">${esc(src)} from earlier days. Tap one to choose what to add to ${esc(s.meal.toLowerCase())}.</p><div class="list">${list.map(x=>{const t=totals(x.list);return `<button class="li" data-act="pastPick" data-k="${x.k}"><span class="grow" style="min-width:0"><b>${dayLabel(x.k)}</b><small class="ell">${esc(x.list.map(e=>e.n).join(', '))}</small></span><span class="num" style="font-weight:600;white-space:nowrap">${fint(t.kcal)} kcal</span></button>`;}).join('')}</div>`;
+}
 function copySources(slot){const out=[];for(let i=1;i<=30;i++){const k=addDays(ui.date,-i);const list=day(k).food.filter(e=>e.meal===slot);if(list.length)out.push({k,list});}return out;}
 function shCopy(){
   const s=ui.sheet,src=copySources(s.src);
@@ -1664,33 +1738,90 @@ function shScan(){
   return `<div class="sh-h"><div class="grab"></div><div class="row between"><h3>Scan a barcode</h3><button class="btn sm" data-act="backToFood">Back</button></div></div>
   <div class="sh-b stack">${body}
   <div class="field"><label for="bcIn">Or type the barcode number</label><div class="row"><input class="inp num grow" id="bcIn" inputmode="numeric" maxlength="14" placeholder="e.g. 5000159407236" value="${esc(s.typed||'')}"><button class="btn primary" data-act="bcLookup">Look up</button></div></div>
-  <p class="foot">Product details come from Open Food Facts, a free database anyone can add to. Always check the values against the packet.</p></div>`;
+  <p class="foot">Tally checks foods added by people using this app first, then Open Food Facts, a free database with millions of products from Irish and UK shops. Anything missing only needs entering once${fbUser?'':' (sign in to share it with everyone)'}. Always check the values against the packet.</p></div>`;
+}
+// Barcodes can be printed as EAN-13, UPC-A (12 digits) or with extra leading zeros: try each form.
+function bcVariants(code){
+  const out=[code],add=c=>{if(c&&/^\d{8,14}$/.test(c)&&!out.includes(c))out.push(c);};
+  if(code.length===12)add('0'+code);
+  if(code.length===13&&code[0]==='0')add(code.slice(1));
+  if(code.length===14&&code[0]==='0')add(code.slice(1));
+  if(code.length<13)add(code.padStart(13,'0'));
+  return out;
 }
 function offFood(p){
-  const n=p.nutriments||{},num=k=>{const v=n[k]===''||n[k]==null?NaN:Number(n[k]);return isFinite(v)&&v>=0?Math.round(v*10)/10:null;};
-  let kcal=num('energy-kcal_100g');if(kcal==null){const kj=num('energy-kj_100g')??num('energy_100g');if(kj!=null)kcal=Math.round(kj/4.184);}
-  const name=String(p.product_name||p.product_name_en||'').trim(),brand=String(p.brands||'').split(',')[0].trim();
-  const f={n:((brand&&!norm(name).includes(norm(brand))?brand+' ':'')+name).trim().slice(0,60),kcal,p:num('proteins_100g'),c:num('carbohydrates_100g'),f:num('fat_100g'),fib:num('fiber_100g')};
+  const n=p.nutriments||{};
+  const num=k=>{const v=n[k]===''||n[k]==null?NaN:Number(n[k]);return isFinite(v)&&v>=0?Math.round(v*10)/10:null;};
   const sq=Number(p.serving_quantity),ss=String(p.serving_size||'').trim();
+  // Per 100 g first; if a product only lists per-serving values, convert them using the serving weight.
+  const per=(base,kj)=>{
+    let v=num(base+'_100g');
+    if(v==null&&sq>0){const sv=num(base+'_serving');if(sv!=null)v=Math.round(sv*1000/sq)/10;}
+    if(v==null&&kj){const j=per(kj);if(j!=null)v=Math.round(j/4.184);}
+    return v;
+  };
+  const kcal=per('energy-kcal','energy-kj')??(num('energy_100g')!=null?Math.round(num('energy_100g')/4.184):null);
+  const name=String(p.product_name_en||p.product_name||p.generic_name_en||p.generic_name||'').trim();
+  const brand=String(p.brands||'').split(',')[0].trim();
+  const qty=String(p.quantity||'').trim();
+  let full=((brand&&!norm(name).includes(norm(brand))?brand+' ':'')+name).trim();
+  if(!name&&brand)full=brand+(qty?' '+qty:'');
+  const f={n:full.slice(0,60),kcal,p:per('proteins'),c:per('carbohydrates'),f:per('fat'),fib:per('fiber')};
   if(sq>0){f.sg=Math.round(sq*10)/10;f.sl=ss&&ss.length<=24?ss:'1 serving';}
   return f;
 }
+const OFF_FIELDS='product_name,product_name_en,generic_name,generic_name_en,brands,quantity,nutriments,serving_size,serving_quantity';
+const withTimeout=(p,ms)=>Promise.race([p,sleep(ms).then(()=>{throw new Error('timeout');})]);
+async function offLookup(codes){
+  let reached=false,partial=null;
+  for(const c of codes){
+    try{
+      const r=await withTimeout(fetch(`https://world.openfoodfacts.org/api/v2/product/${c}?fields=${OFF_FIELDS}`),9000);
+      if(!r.ok&&r.status!==404)continue;
+      reached=true;
+      const j=await r.json().catch(()=>null);
+      const p=j&&j.product&&(j.status===1||j.status==='success')?j.product:null;
+      if(!p)continue;
+      const f=offFood(p);
+      if(['kcal','p','c','f'].every(k=>f[k]!=null))return {reached,food:f,full:true};
+      if(!partial)partial=f;
+    }catch(e){}
+  }
+  return {reached,food:partial,full:false};
+}
+// Foods that people using this copy of Tally have entered from the label, shared so everyone can scan them.
+async function communityLookup(codes){
+  if(!fdb||!fbUser)return null;
+  for(const c of codes){
+    try{const d=await withTimeout(fdb.collection('barcodes').doc(c).get(),6000);if(d.exists){const x=d.data();if(x&&x.n&&x.kcal!=null)return x;}}catch(e){return null;}
+  }
+  return null;
+}
+function shareBarcode(bc,food){
+  if(!fdb||!fbUser||!bc||!/^\d{6,14}$/.test(bc))return;
+  const o={n:food.n,kcal:food.kcal,p:food.p,c:food.c,f:food.f,fib:food.fib||0,by:fbUser.uid,at:Date.now()};
+  if(food.sl&&food.sg>0){o.sl=food.sl;o.sg=food.sg;}
+  const ref=fdb.collection('barcodes').doc(bc);
+  // Only adds new products or updates ones you entered yourself; the database rules refuse anything else.
+  ref.get().then(d=>{if(d.exists&&d.data().by!==fbUser.uid)return;return ref.set(o);}).catch(()=>{});
+}
 async function lookupBarcode(code){
   const s=ui.sheet;if(!s)return;
-  const own=(S.customFoods||[]).find(f=>f.bc===code);
+  const codes=bcVariants(code);
+  const own=(S.customFoods||[]).find(f=>f.bc&&codes.includes(f.bc));
   if(own){toast('Found in your foods');openQty(own,s.meal,null,s.ctx);return;}
   s.state='busy';s.code=code;renderSheet();
-  try{
-    const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity`);
-    if(!r.ok&&r.status!==404)throw new Error('http');
-    const j=await r.json().catch(()=>null);
-    if(ui.sheet!==s)return;
-    const p=j&&j.product&&(j.status===1||j.status==='success')?j.product:null,f=p?offFood(p):{};
-    const full=p&&['kcal','p','c','f'].every(k=>f[k]!=null);
-    ui.sheet={type:'customFood',meal:s.meal,q:'',bc:code,prefill:f,back:s.back,
-      scanNote:full?'Found it. Check the values against the packet, then save. Nutrition data from Open Food Facts.':p?'Found the product, but some nutrition values are missing. Fill them in from the label.':'This barcode isn’t in the database yet. Enter the values from the label and the app will recognise it next time you scan it.'};
-    renderSheet();
-  }catch(e){if(ui.sheet===s){s.state='err';renderSheet();}}
+  const show=(f,note)=>{if(ui.sheet!==s)return;ui.sheet={type:'customFood',meal:s.meal,q:'',bc:code,prefill:f||{},back:s.back,scanNote:note};renderSheet();};
+  const shared=await communityLookup(codes);
+  if(ui.sheet!==s)return;
+  if(shared){const f={n:shared.n,kcal:shared.kcal,p:shared.p,c:shared.c,f:shared.f,fib:shared.fib||0};if(shared.sl&&shared.sg){f.sl=shared.sl;f.sg=shared.sg;}show(f,'Found it. Someone using Tally added this product from its label. Check it against the packet, then save.');return;}
+  const r=await offLookup(codes);
+  if(ui.sheet!==s)return;
+  if(!r.reached&&!r.food){s.state='err';renderSheet();return;}
+  const signed=!!(fdb&&fbUser);
+  if(r.full)show(r.food,'Found it. Check the values against the packet, then save. Nutrition data from Open Food Facts.');
+  else if(r.food)show(r.food,'Found the product, but some nutrition values are missing. Fill them in from the label'+(signed?' and everyone using Tally will be able to scan it.':'.'));
+  else show({},'This product isn’t in any database yet. Enter the values from the label once'+(signed?' and it will scan instantly for you and everyone else using Tally.':' and the app will recognise it next time you scan it.'));
 }
 
 /* ============================== ACTIONS ============================== */
@@ -1841,10 +1972,10 @@ const A={
     if(kcal>950||p+c+f>100.5)return bad('Those numbers are higher than any food per 100 g allows. Check you used the per-100 g column.');
     if(sl&&!(sg>0))return bad('Enter the serving size in grams, or clear the serving name.');
     const food={n:n.slice(0,60),kcal,p,c,f,fib:fib||0};if(sl&&sg>0){food.sl=sl;food.sg=sg;}
-    if(ui.sheet.editId){const id=ui.sheet.editId,i=(S.customFoods||[]).findIndex(x=>x.id===id);if(i>=0)S.customFoods[i]=Object.assign({},S.customFoods[i],food);touchMain();A.backToFood();toast('Food updated');return;}
+    if(ui.sheet.editId){const id=ui.sheet.editId,i=(S.customFoods||[]).findIndex(x=>x.id===id);if(i>=0){S.customFoods[i]=Object.assign({},S.customFoods[i],food);if(S.customFoods[i].bc)shareBarcode(S.customFoods[i].bc,S.customFoods[i]);}touchMain();A.backToFood();toast('Food updated');return;}
     if((S.customFoods||[]).some(x=>norm(x.n)===norm(food.n))&&!ui.sheet.dupOk){ui.sheet.dupOk=true;return bad(`You already have a food called “${food.n}”. Tap Save again to replace it, or change the name.`);}
     const ctx=ui.sheet.back&&ui.sheet.back.ctx==='draft'?'draft':null;
-    if(ui.sheet.bc)food.bc=ui.sheet.bc;
+    if(ui.sheet.bc){food.bc=ui.sheet.bc;shareBarcode(food.bc,food);}
     const saved=saveCustomFood(food,ui.sheet.bc?'scan':'custom');const meal=ui.sheet.meal;openQty(saved,meal,null,ctx);
   },
   closeSheet(){closeSheet();},
@@ -1906,7 +2037,11 @@ const A={
   histMode(el){ui.histMode=el.dataset.m;ui.histEx=null;render();},
   openDiary(el){ui.date=el.dataset.k;ui.fromProgress=true;ui.tab='diary';window.scrollTo(0,0);render();},
   backToProgress(){ui.fromProgress=false;ui.tab='history';ui.histMode=ui.histMode||'nutrition';render();},
-  moreDays(){ui.nDays=(ui.nDays||14)<30?30:90;render();},
+  calOpen(){openSheet({type:'cal',month:todayKey().slice(0,7)});},
+  calMonth(el){const s=ui.sheet,[y,m]=s.month.split('-').map(Number),d=new Date(y,m-1+(+el.dataset.d),1);const k=todayKey(d).slice(0,7);if(k>todayKey().slice(0,7))return;s.month=k;renderSheet();},
+  calPick(el){closeSheet();A.openDiary(el);},
+  pastSrc(el){ui.sheet.src=el.dataset.m;renderSheet();},
+  pastPick(el){const s=ui.sheet,src=s.src||s.meal,k=el.dataset.k,list=day(k).food.filter(e=>e.meal===src);if(!list.length)return;openReview({title:`${src} from ${dayLabel(k)}`,sub:`Adding to ${dayLabel(ui.date)==='Today'?'today':dayLabel(ui.date)}`,items:list.map(itemFromEntry),meal:s.meal,back:s});},
   histEx(el){ui.histEx=el.dataset.n;window.scrollTo(0,0);render();},
   histBack(){ui.histEx=null;render();},
   toggleSess(el){ui.openSess=ui.openSess===el.dataset.id?null:el.dataset.id;render();},
