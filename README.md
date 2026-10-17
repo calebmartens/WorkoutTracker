@@ -26,7 +26,7 @@ Once installed it opens full screen and works offline.
 
 ## Firebase setup (already done for this app)
 
-The app uses the Firebase project `tally-82514`: Authentication with Email/Password, and a Firestore database. Each user's data is stored at `users/{uid}` (settings, workouts, foods) with one document per day under `users/{uid}/days/{date}`.
+The app uses the Firebase project `tally-82514`: Authentication with Email/Password, and a Firestore database. Each user's data is stored at `users/{uid}` (settings, workouts, foods, weigh-ins) with one document per day under `users/{uid}/days/{date}`.
 
 Scanned products that people enter from the label are shared in `barcodes/{barcode}`, so anyone signed in can scan them.
 

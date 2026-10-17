@@ -316,6 +316,21 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 .cal button i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .cal button i.no{background:transparent}
 .cal .pad{visibility:hidden}
+/* Weight */
+.wrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.wrow b{font-weight:600}
+.wrow .grow small{display:block;font-size:12px;color:var(--muted)}
+.wbig{font-family:var(--f-display);font-weight:700;font-size:52px;line-height:.95;font-variant-numeric:tabular-nums}
+.wbig small{font-size:20px;font-weight:600;color:var(--muted);margin-left:4px}
+.wchart{width:100%;height:auto;display:block;margin-top:6px}
+.wchart text{fill:var(--muted);font-size:10px;font-family:var(--f-body)}
+.wleg{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px}
+.wleg span{display:inline-flex;align-items:center;gap:6px}
+.wleg i{display:inline-block}
+.delta{font-weight:600;font-variant-numeric:tabular-nums}
+.step{display:grid;grid-template-columns:56px 1fr 56px;gap:8px;align-items:center}
+.step .inp{height:60px;font-size:28px;text-align:center;font-family:var(--f-display);font-weight:700}
+.step .btn{height:60px;font-size:22px}
 .preview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
 .preview div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px}
 .preview b{display:block;font-family:var(--f-display);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
@@ -843,7 +858,7 @@ const GOALS={maintain:{l:'Maintenance',d:'Hold your current weight'},cut:{l:'Cut
 const MEALS=['Breakfast','Lunch','Dinner','Snacks'];
 const LB=2.20462262185, MI=1.609344;
 const KEY='tally.v1';
-const MAIN_KEYS=['settings','profile','goal','workouts','customEx','customFoods','recent','meals','uni','active'];
+const MAIN_KEYS=['settings','profile','goal','workouts','customEx','customFoods','recent','meals','uni','active','weights'];
 
 /* ============================== HELPERS ============================== */
 const $=s=>document.querySelector(s);
@@ -873,13 +888,14 @@ function starter(){
     w('Bodyweight',[['Push-Up',3,'15'],['Inverted Row',3,'10'],['Bodyweight Squat',3,'20'],['Split Squat',3,'12'],['Glute Bridge',3,'15'],['Plank',3,'45 s']])
   ];
 }
-function defaults(){return {v:1,settings:{units:'kg',hUnit:'cm',rest:90},profile:{sex:'',age:null,height:null,weight:null,activity:'mod'},goal:'maintain',workouts:starter(),customEx:[],customFoods:[],recent:[],meals:[],uni:{},active:null,days:{}};}
+function defaults(){return {v:1,settings:{units:'kg',hUnit:'cm',rest:90},profile:{sex:'',age:null,height:null,weight:null,activity:'mod'},goal:'maintain',workouts:starter(),customEx:[],customFoods:[],recent:[],meals:[],uni:{},active:null,days:{},weights:{}};}
 function loadLocal(){try{const s=localStorage.getItem(KEY);if(!s)return null;const o=JSON.parse(s);return o&&o.v?o:null;}catch(e){return null;}}
 let S=Object.assign(defaults(),loadLocal()||{});
 S.settings=Object.assign({units:'kg',hUnit:'cm',rest:90},S.settings||{});
 S.profile=Object.assign({sex:'',age:null,height:null,weight:null,activity:'mod'},S.profile||{});
 if(!Array.isArray(S.meals))S.meals=[];
 if(!S.uni||typeof S.uni!=='object')S.uni={};
+if(!S.weights||typeof S.weights!=='object'||Array.isArray(S.weights))S.weights={};
 let pending={main:false,days:[]};
 try{const p=JSON.parse(localStorage.getItem(KEY+'.pending')||'null');if(p)pending=p;}catch(e){}
 let dirtyMain=!!pending.main; const dirtyDays=new Set(pending.days||[]);
@@ -954,6 +970,7 @@ async function loadCloud(ref,maxDays){
     S.profile=Object.assign({sex:'',age:null,height:null,weight:null,activity:'mod'},S.profile||{});
     if(!Array.isArray(S.meals))S.meals=[];
     if(!S.uni||typeof S.uni!=='object')S.uni={};
+    if(!S.weights||typeof S.weights!=='object'||Array.isArray(S.weights))S.weights={};
     ui.inSession=!!S.active;
   }else{
     // First time this account syncs: everything on this phone moves into it.
@@ -999,7 +1016,9 @@ function initFirebase(){
     }else{
       mainRef=null;cloudReady=false;clearTimeout(connectT);setSync('local');
     }
-    render();if(ui.sheet&&ui.sheet.type==='account')renderSheet();
+    render();
+    // Only redraw the account sheet if the sign-in state it shows has changed, so typing isn't interrupted.
+    if(ui.sheet&&ui.sheet.type==='account'&&ui.sheet.forUser!==!!u)renderSheet();
   });
 }
 async function tryConnect(){
@@ -1126,7 +1145,8 @@ const ICON={
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>',
-  fwd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>'
+  fwd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8.5 9a5 5 0 0 1 7 0M12 9.5l1.2-2"/></svg>'
 };
 
 /* ---------- Train ---------- */
@@ -1207,6 +1227,7 @@ function vDiary(){
   const k=ui.date,d=day(k),plan=dayPlan(k),t=totals(d.food);
   let h=`<div class="hdr"><h1>Diary</h1>${syncPill()}</div>${ui.fromProgress?`<button class="link" data-act="backToProgress" style="margin:-4px 0 6px">‹ Back to progress</button>`:''}
   <div class="daynav"><button class="icon-btn" data-act="dayShift" data-d="-1" aria-label="Previous day">${ICON.back}</button><span class="lbl">${dayLabel(k)}${k===todayKey()?'':` <button class="link" data-act="dayToday">Jump to today</button>`}</span><button class="icon-btn" data-act="dayShift" data-d="1" aria-label="Next day">${ICON.fwd}</button></div>
+  ${weightRow(k)}
   <div class="card hero" style="margin-top:10px">`;
   if(plan){
     const rem=plan.kcal-t.kcal;const pct=t.kcal/plan.kcal;
@@ -1260,8 +1281,9 @@ function insights(t,p,k){
 
 /* ---------- History / progress ---------- */
 function vHistory(){
-  let h=`<div class="hdr"><h1>Progress</h1>${syncPill()}</div><div class="seg"><button class="${ui.histMode==='sessions'?'on':''}" data-act="histMode" data-m="sessions">Workouts</button><button class="${ui.histMode==='exercises'?'on':''}" data-act="histMode" data-m="exercises">Exercises</button><button class="${ui.histMode==='nutrition'?'on':''}" data-act="histMode" data-m="nutrition">Nutrition</button></div><div class="stack" style="margin-top:12px">`;
+  let h=`<div class="hdr"><h1>Progress</h1>${syncPill()}</div><div class="seg"><button class="${ui.histMode==='sessions'?'on':''}" data-act="histMode" data-m="sessions">Workouts</button><button class="${ui.histMode==='exercises'?'on':''}" data-act="histMode" data-m="exercises">Exercises</button><button class="${ui.histMode==='nutrition'?'on':''}" data-act="histMode" data-m="nutrition">Nutrition</button><button class="${ui.histMode==='weight'?'on':''}" data-act="histMode" data-m="weight">Weight</button></div><div class="stack" style="margin-top:12px">`;
   if(ui.histMode==='nutrition')return h+vNutrition()+`</div>`;
+  if(ui.histMode==='weight')return h+vWeight()+`</div>`;
   const ss=allSessions();
   if(!ss.length)return h+`<div class="empty"><h3>No workouts logged yet</h3><p>Finish a workout and your sets, volume and personal records show up here.</p><div style="margin-top:14px"><button class="btn primary" data-act="tab" data-tab="train">Go to workouts</button></div></div></div>`;
   if(ui.histMode==='sessions'){
@@ -1375,6 +1397,109 @@ function shCal(){
   <p class="foot">Tap a day to open its food diary.</p></div>`;
 }
 
+/* ---------- Weight ---------- */
+// Weigh-ins are stored in kg by date. The trend smooths day-to-day water and food swings with an
+// exponential moving average (10% per day, adjusted for gaps), the method used by most weight-trend apps.
+function wList(){return Object.entries(S.weights||{}).filter(([k,v])=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&typeof v==='number'&&isFinite(v)&&v>0).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>({k,v}));}
+const dayDiff=(a,b)=>Math.round((parseKey(b)-parseKey(a))/864e5);
+function wTrend(list){
+  let t=null,prev=null;
+  return list.map(x=>{
+    if(t==null)t=x.v;else{const a=1-Math.pow(0.9,Math.max(1,dayDiff(prev,x.k)));t=t+a*(x.v-t);}
+    prev=x.k;return {k:x.k,v:x.v,t};
+  });
+}
+// Weekly rate from a least-squares line through the last 28 days of weigh-ins (needs 3+ weigh-ins over 7+ days).
+function wRate(list){
+  const end=list.length?list[list.length-1].k:null;if(!end)return null;
+  const pts=list.filter(x=>dayDiff(x.k,end)<=28);
+  if(pts.length<3||dayDiff(pts[0].k,end)<7)return null;
+  const xs=pts.map(x=>dayDiff(pts[0].k,x.k)),ys=pts.map(x=>x.v),n=pts.length;
+  const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0,den=0;for(let i=0;i<n;i++){num+=(xs[i]-mx)*(ys[i]-my);den+=(xs[i]-mx)**2;}
+  return den?num/den*7:null;
+}
+function trendAt(tr,k){let r=null;for(const x of tr){if(x.k<=k)r=x;else break;}return r;}
+const wFmt=kg=>kg==null||!isFinite(kg)?"–":wDisp(kg).toFixed(1);
+const sgn=(v,d=1)=>{const r=Math.abs(v).toFixed(d);return (Number(r)===0?'±':v>0?'+':'−')+r;};
+function weightRow(k){
+  const v=(S.weights||{})[k];
+  return `<button class="wrow t1" data-act="weightOpen" data-k="${k}"><span class="ic sm">${ICON.scale}</span><span class="grow">${v?`<b>${wFmt(v)} ${wU()}</b><small>Weigh-in · tap to change</small>`:`<b>Log weight</b><small>${k===todayKey()?'Weigh yourself in the morning for the most consistent readings':'No weigh-in for this day'}</small>`}</span>${v?ICON.fwd.replace('<svg','<svg width="18" height="18"'):'<span class="plus">+</span>'}</button>`;
+}
+function vWeight(){
+  const list=wList(),tr=wTrend(list);
+  if(!list.length)return `<div class="empty"><h3>Track your weight</h3><p>Log your weight as often as you like. Daily morning weigh-ins give the clearest trend, but a few times a week works too.</p><div style="margin-top:14px"><button class="btn primary" data-act="weightOpen" data-k="${todayKey()}">Log today's weight</button></div></div>`;
+  const last=tr[tr.length-1],today=todayKey(),rate=wRate(list),tg=targets();
+  const tgPlan=tg?tg.plans[S.goal]:null;
+  const ago=n=>{const t=trendAt(tr,addDays(last.k,-n));return t&&dayDiff(tr[0].k,last.k)>=n?last.t-t.t:null;};
+  const d7=ago(7),d30=ago(30),dAll=last.t-tr[0].t;
+  let h=`<div class="card hero"><div class="row between"><h2>Trend weight</h2><span class="muted" style="font-size:13px">${list.length} weigh-in${list.length===1?'':'s'}</span></div>
+  <div class="row between" style="align-items:flex-end;margin-top:8px"><div class="wbig">${wFmt(last.t)}<small>${wU()}</small></div><div style="text-align:right"><div style="font-size:13px;color:var(--muted)">Last weigh-in</div><b class="num">${wFmt(last.v)} ${wU()}</b> <span class="muted" style="font-size:13px">${relDay(last.k)}</span></div></div>
+  <div class="stats" style="margin-top:14px"><div class="stat"><b class="delta">${d7==null?'–':sgn(wDisp(d7))}</b><span>7 days (${wU()})</span></div><div class="stat"><b class="delta">${d30==null?'–':sgn(wDisp(d30))}</b><span>30 days (${wU()})</span></div><div class="stat"><b class="delta">${list.length>1?sgn(wDisp(dAll)):'–'}</b><span>Since ${shortDate(tr[0].k)}</span></div></div>`;
+  h+=`<div class="ins">${rateInsight(rate,tgPlan).map(i=>`<div class="${i.t}"><i></i><span>${i.m}</span></div>`).join('')}</div></div>`;
+  if(last.k!==today)h+=`<button class="btn primary block" data-act="weightOpen" data-k="${today}">Log today's weight</button>`;
+  else h+=`<button class="btn block" data-act="weightOpen" data-k="${today}">Change today's weigh-in (${wFmt(last.v)} ${wU()})</button>`;
+  // update targets prompt
+  if(S.profile.weight&&Math.abs(last.t-S.profile.weight)>=1)h+=`<div class="card" style="display:flex;gap:12px;align-items:center"><span class="grow" style="font-size:14px">Your targets are based on <b>${wFmt(S.profile.weight)} ${wU()}</b>, but your trend is now <b>${wFmt(last.t)} ${wU()}</b>.</span><button class="btn primary sm" data-act="weightUseTrend">Update targets</button></div>`;
+  else if(!S.profile.weight)h+=`<div class="card" style="display:flex;gap:12px;align-items:center"><span class="grow" style="font-size:14px">Use your trend weight for your calorie and macro targets.</span><button class="btn primary sm" data-act="weightUseTrend">Use ${wFmt(last.t)} ${wU()}</button></div>`;
+  // chart
+  const R=ui.wRange||'3m',days={'1m':30,'3m':91,'6m':182,'1y':365}[R];
+  const from=R==='all'||!days?tr[0].k:addDays(today,-days),vis=tr.filter(x=>x.k>=from);
+  h+=`<div class="card"><div class="row between"><h2>Progress</h2></div><div class="seg" style="margin-top:10px">${[['1m','1M'],['3m','3M'],['6m','6M'],['1y','1Y'],['all','All']].map(([k,l])=>`<button class="${R===k?'on':''}" data-act="wRange" data-r="${k}">${l}</button>`).join('')}</div>${weightChart(vis,from,today)}
+  <div class="wleg"><span><i style="width:16px;height:3px;border-radius:2px;background:var(--accent)"></i>Trend</span><span><i style="width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.6"></i>Weigh-ins</span></div></div>`;
+  // history
+  const recent=tr.slice().reverse(),n=ui.wAll?recent.length:Math.min(recent.length,10);
+  h+=`<div class="sec-h"><h2>Weigh-ins</h2><button class="link" data-act="weightOpen" data-k="${today}">+ Add</button></div><div class="card" style="padding-block:2px">`;
+  for(let i=0;i<n;i++){const x=recent[i],p=recent[i+1],dv=p?x.v-p.v:null;
+    h+=`<button class="nrow" data-act="weightOpen" data-k="${x.k}"><span class="grow"><b>${dayLabel(x.k)}</b><br><span class="muted num" style="font-size:13px">Trend ${wFmt(x.t)} ${wU()}</span></span><span style="text-align:right"><b class="num">${wFmt(x.v)} ${wU()}</b><br><span class="muted num" style="font-size:12px">${dv==null?'First':sgn(wDisp(dv))}</span></span>${ICON.fwd.replace('<svg','<svg width="18" height="18"')}</button>`;}
+  h+=`</div>${recent.length>10&&!ui.wAll?`<button class="btn block" data-act="wAll">Show all ${recent.length} weigh-ins</button>`:''}`;
+  return h;
+}
+function rateInsight(rate,plan){
+  if(rate==null)return [{t:'',m:'Log at least 3 weigh-ins over a week or more to see your weekly rate.'}];
+  const r=wDisp(rate),u=wU(),gk=S.goal,gl=GOALS[gk].l.toLowerCase();
+  const word=Math.abs(rate)<0.05?'Holding steady':rate<0?`Losing ${fmt(Math.abs(r),2)} ${u} a week`:`Gaining ${fmt(r,2)} ${u} a week`;
+  if(!plan)return [{t:'',m:`<b>${word}</b> over the last 4 weeks. Set your details in Plan to compare this with your goal.`}];
+  const want=plan.wk; // kg per week the goal is built around
+  const ws=wDisp(want),diff=rate-want;
+  let t='good',msg=`<b>${word}</b>, right in line with ${gl}.`;
+  if(gk==='maintain'){if(Math.abs(rate)>0.25){t='warn';msg=`<b>${word}</b> while on maintenance. If that's not intended, ${rate>0?'eat about '+r10(Math.abs(rate)*1100)+' kcal a day less':'eat about '+r10(Math.abs(rate)*1100)+' kcal a day more'}.`;}}
+  else if(Math.abs(diff)>Math.max(0.15,Math.abs(want)*0.5)){
+    t='warn';
+    const faster=(gk==='cut'&&rate<want)||(gk==='bulk'&&rate>want);
+    msg=`<b>${word}</b>. ${GOALS[gk].l} aims for about ${sgn(ws,2)} ${u} a week, so you're ${faster?'ahead of':'behind'} that pace. ${faster?(gk==='cut'?'Losing too fast can cost muscle; consider eating about '+r10(Math.abs(diff)*1100)+' kcal a day more.':'Some extra gain will be fat; consider eating about '+r10(Math.abs(diff)*1100)+' kcal a day less.'):'Consider '+(gk==='cut'?'eating about '+r10(Math.abs(diff)*1100)+' kcal a day less':'eating about '+r10(Math.abs(diff)*1100)+' kcal a day more')+', and give it 2–3 weeks.'}`;
+  }
+  return [{t,m:msg}];
+}
+function weightChart(pts,from,to){
+  if(!pts.length)return `<p class="muted" style="font-size:14px;padding:22px 0;text-align:center">No weigh-ins in this period.</p>`;
+  const W=330,H=190,L=38,R=10,T=12,B=26;
+  if(pts[0].k>from)from=pts[0].k;
+  const span=Math.max(1,dayDiff(from,to));
+  const vals=pts.flatMap(p=>[wDisp(p.v),wDisp(p.t)]);
+  let lo=Math.min(...vals),hi=Math.max(...vals);
+  if(hi-lo<2){const m=(hi+lo)/2;lo=m-1;hi=m+1;}
+  const step=niceStep((hi-lo)/3);lo=Math.floor(lo/step)*step;hi=Math.ceil(hi/step)*step;
+  const X=k=>L+(W-L-R)*dayDiff(from,k)/span,Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let g='';for(let v=lo;v<=hi+1e-9;v+=step){const y=Y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${(y+3).toFixed(1)}" text-anchor="end">${fmt(v,1)}</text>`;}
+  const dots=pts.map(p=>`<circle cx="${X(p.k).toFixed(1)}" cy="${Y(wDisp(p.v)).toFixed(1)}" r="2.6" fill="var(--muted)" fill-opacity=".55"/>`).join('');
+  const line=pts.length>1?`<path d="${pts.map((p,i)=>`${i?'L':'M'}${X(p.k).toFixed(1)},${Y(wDisp(p.t)).toFixed(1)}`).join('')}" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`:'';
+  const lp=pts[pts.length-1];
+  return `<svg class="wchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart">${g}${dots}${line}<circle cx="${X(lp.k).toFixed(1)}" cy="${Y(wDisp(lp.t)).toFixed(1)}" r="4.5" fill="var(--accent)"/><text x="${L}" y="${H-6}">${shortDate(from)}</text><text x="${W-R}" y="${H-6}" text-anchor="end">${shortDate(to)}</text></svg>`;
+}
+function shWeight(){
+  const s=ui.sheet,had=(S.weights||{})[s.orig]!=null;
+  return `<div class="sh-h"><div class="grab"></div><div class="row between"><h3>${had?'Edit weigh-in':'Log weight'}</h3><button class="btn sm" data-act="closeSheet">Close</button></div></div>
+  <div class="sh-b stack">
+  <div class="field"><label for="wDate">Date</label><input class="inp" id="wDate" type="date" max="${todayKey()}" value="${s.k}" data-ch="wDate"></div>
+  <div class="field"><label for="wVal">Weight (${wU()})</label><div class="step"><button class="btn" data-act="wStep" data-d="-1" aria-label="Decrease by 0.1">−</button><input class="inp num" id="wVal" inputmode="decimal" autocomplete="off" value="${s.val}" data-in="wVal" placeholder="${isLb()?'e.g. 175.4':'e.g. 80.4'}"><button class="btn" data-act="wStep" data-d="1" aria-label="Increase by 0.1">+</button></div></div>
+  ${s.exists&&s.k!==s.orig?`<p class="note">There's already a weigh-in on ${dayLabel(s.k).toLowerCase()==='today'?'today':dayLabel(s.k)} (${wFmt(S.weights[s.k])} ${wU()}). Saving will replace it.</p>`:''}
+  <p class="note" id="wErr" hidden></p>
+  <button class="btn primary block" data-act="weightSave">Save</button>
+  ${had?'<button class="btn danger block" data-act="weightDelete">Delete this weigh-in</button>':''}
+  <p class="foot">For the most consistent readings, weigh yourself first thing in the morning, after the toilet and before eating or drinking.</p></div>`;
+}
+
 /* ---------- Plan ---------- */
 function vPlan(){
   const p=S.profile,lb=isLb(),ft=S.settings.hUnit==='ft';
@@ -1429,7 +1554,7 @@ const AUTH_MSG={
 };
 function authErr(e){return AUTH_MSG[e&&e.code]||'Something went wrong. Try again.';}
 function shAccount(){
-  const s=ui.sheet;
+  const s=ui.sheet;s.forUser=!!fbUser;
   const err=s.err?`<p class="note" style="background:color-mix(in srgb,var(--bad) 14%,transparent)">${esc(s.err)}</p>`:'';
   const info=s.info?`<p class="note" style="background:color-mix(in srgb,var(--good) 14%,transparent)">${esc(s.info)}</p>`:'';
   if(!fbAuth)return `<div class="sh-h"><div class="grab"></div><h3>Account</h3></div><div class="sh-b stack">
@@ -1493,6 +1618,7 @@ function renderSheet(){
   else if(s.type==='import')el.innerHTML=shImport();
   else if(s.type==='account')el.innerHTML=shAccount();
   else if(s.type==='cal')el.innerHTML=shCal();
+  else if(s.type==='weight')el.innerHTML=shWeight();
   else if(s.type==='review')el.innerHTML=shReview();
   else if(s.type==='saveMeal')el.innerHTML=shSaveMeal();
   else if(s.type==='mealEdit')el.innerHTML=shMealEdit();
@@ -2059,6 +2185,26 @@ const A={
   histMode(el){ui.histMode=el.dataset.m;ui.histEx=null;render();},
   openDiary(el){ui.date=el.dataset.k;ui.fromProgress=true;ui.tab='diary';window.scrollTo(0,0);render();},
   backToProgress(){ui.fromProgress=false;ui.tab='history';ui.histMode=ui.histMode||'nutrition';render();},
+  weightOpen(el){const k=el.dataset.k&&el.dataset.k<=todayKey()?el.dataset.k:todayKey();const cur=(S.weights||{})[k],last=wList().pop();const base=cur??(last?last.v:S.profile.weight);openSheet({type:'weight',k,orig:k,exists:cur!=null,val:base?wDisp(base).toFixed(1):''});const i=$('#wVal');if(i&&cur==null)setTimeout(()=>{try{i.focus();i.select();}catch(e){}},80);},
+  wStep(el){const s=ui.sheet,v=parseNum($('#wVal').value);const base=v==null||isNaN(v)?(wList().length?wDisp(wList().pop().v):(isLb()?170:75)):v;s.val=Math.max(0,Math.round((base+0.1*(+el.dataset.d))*10)/10).toFixed(1);$('#wVal').value=s.val;$('#wErr').hidden=true;},
+  weightSave(){
+    const s=ui.sheet,err=$('#wErr'),v=parseNum($('#wVal').value),k=($('#wDate').value||'').trim();
+    const bad=m=>{err.textContent=m;err.hidden=false;};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(k))return bad('Pick a date.');
+    if(k>todayKey())return bad('You can\'t log a weight for a future date.');
+    if(v==null||isNaN(v))return bad('Enter your weight.');
+    const kg=wStore(v);
+    if(!(kg>=30&&kg<=300))return bad('Enter a weight between '+(isLb()?'66 and 660 lb':'30 and 300 kg')+'.');
+    S.weights=Object.assign({},S.weights);
+    if(s.orig!==k&&S.weights[s.orig]!=null)delete S.weights[s.orig];
+    S.weights[k]=Math.round(kg*10000)/10000;
+    touchMain();closeSheet();render();
+    toast(`Saved ${fmt(v,1)} ${wU()} for ${dayLabel(k).toLowerCase()==='today'?'today':dayLabel(k)}`);
+  },
+  weightDelete(el){if(!armed(el,'Tap again to delete'))return;const s=ui.sheet;S.weights=Object.assign({},S.weights);delete S.weights[s.orig];touchMain();closeSheet();render();toast('Weigh-in deleted');},
+  weightUseTrend(){const tr=wTrend(wList());if(!tr.length)return;S.profile.weight=Math.round(tr[tr.length-1].t*10)/10;touchMain();render();toast('Targets updated to your trend weight');},
+  wRange(el){ui.wRange=el.dataset.r;render();},
+  wAll(){ui.wAll=true;render();},
   calOpen(){openSheet({type:'cal',month:todayKey().slice(0,7)});},
   calMonth(el){const s=ui.sheet,[y,m]=s.month.split('-').map(Number),d=new Date(y,m-1+(+el.dataset.d),1);const k=todayKey(d).slice(0,7);if(k>todayKey().slice(0,7))return;s.month=k;renderSheet();},
   calPick(el){closeSheet();A.openDiary(el);},
@@ -2124,6 +2270,7 @@ const A={
     S.settings=Object.assign({units:'kg',hUnit:'cm',rest:90},S.settings||{});
     S.profile=Object.assign({sex:'',age:null,height:null,weight:null,activity:'mod'},S.profile||{});
     S.days=S.days||{};
+    if(!S.weights||typeof S.weights!=='object'||Array.isArray(S.weights))S.weights={};
     old.concat(Object.keys(S.days)).forEach(k=>dirtyDays.add(k));
     ui.edit=null;ui.inSession=!!S.active;stopRest();touchMain();closeSheet();render();toast('Backup restored');
   },
@@ -2144,6 +2291,7 @@ const IN={
   foodQ(el){ui.sheet.q=el.value;renderResults();},
   rvG(el){const s=ui.sheet,x=+el.dataset.i,v=parseNum(el.value),i=s.items[x];const ok=v!=null&&!isNaN(v)&&v>0&&v<=5000;el.classList.toggle('bad',!ok&&el.value.trim()!=='');i.g=ok?v/s.mult:0;const k=$('#rvk-'+x);if(k)k.textContent=macroLine(itemsTotals([Object.assign({},i,{on:true})],s.mult));rvRefresh();},
   smName(el){ui.sheet.name=el.value;},
+  wVal(el){ui.sheet.val=el.value;const e=$('#wErr');if(e)e.hidden=true;},
   accEmail(el){ui.sheet.email=el.value;},
   accPw(el){ui.sheet.pw=el.value;},
   draftName(el){ui.draft.n=el.value;},
@@ -2152,6 +2300,7 @@ const IN={
 };
 const CH={
   importFile(el){const f=el.files&&el.files[0];if(f)readBackup(f);},
+  wDate(el){const s=ui.sheet,k=el.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||k>todayKey()){toast('Pick today or an earlier date.');el.value=s.k;return;}s.val=$('#wVal').value;s.k=k;s.exists=(S.weights||{})[k]!=null;renderSheet();},
   prof(el){
     const k=el.dataset.k,p=S.profile,v=el.value;
     if(k==='sex')p.sex=v;
@@ -2169,6 +2318,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&ui.sheet){closeSheet();return;}
   if(e.key==='Enter'&&e.target.id==='foodQ'){e.preventDefault();e.target.blur();}
   if(e.key==='Enter'&&e.target.id==='qAmt'){e.preventDefault();A.qtySave();}
+  if(e.key==='Enter'&&e.target.id==='wVal'){e.preventDefault();A.weightSave();}
   if(e.key==='Enter'&&(e.target.id==='accPw'||(e.target.id==='accEmail'&&ui.sheet&&ui.sheet.mode==='reset'))){e.preventDefault();A.accSubmit();}
   if((e.key==='Enter'||e.key===' ')&&e.target.id==='syncPill'&&!ON_CLAUDE){e.preventDefault();A.account();}
 });
