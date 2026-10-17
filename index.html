@@ -1227,7 +1227,6 @@ function vDiary(){
   const k=ui.date,d=day(k),plan=dayPlan(k),t=totals(d.food);
   let h=`<div class="hdr"><h1>Diary</h1>${syncPill()}</div>${ui.fromProgress?`<button class="link" data-act="backToProgress" style="margin:-4px 0 6px">‹ Back to progress</button>`:''}
   <div class="daynav"><button class="icon-btn" data-act="dayShift" data-d="-1" aria-label="Previous day">${ICON.back}</button><span class="lbl">${dayLabel(k)}${k===todayKey()?'':` <button class="link" data-act="dayToday">Jump to today</button>`}</span><button class="icon-btn" data-act="dayShift" data-d="1" aria-label="Next day">${ICON.fwd}</button></div>
-  ${weightRow(k)}
   <div class="card hero" style="margin-top:10px">`;
   if(plan){
     const rem=plan.kcal-t.kcal;const pct=t.kcal/plan.kcal;
@@ -1240,7 +1239,7 @@ function vDiary(){
     <div class="mrow"><span><span class="sw" style="background:var(--pro)"></span>P <b>${fmt(t.p,0)} g</b></span><span><span class="sw" style="background:var(--carb)"></span>C <b>${fmt(t.c,0)} g</b></span><span><span class="sw" style="background:var(--fat)"></span>F <b>${fmt(t.f,0)} g</b></span><span><span class="sw" style="background:var(--fib)"></span>Fibre <b>${fmt(t.fib,0)} g</b></span></div>
     <div class="ins"><div class="warn"><i></i><span>Add your weight, height, age and activity level to get calorie and macro targets.</span></div><button class="btn primary sm" data-act="tab" data-tab="plan" style="align-self:flex-start">Set my targets</button></div>`;
   }
-  h+=`</div><div class="stack" style="margin-top:12px">`;
+  h+=`</div>${weightRow(k)}<div class="stack" style="margin-top:12px">`;
   for(const m of MEALS){
     const list=d.food.filter(e=>e.meal===m);const mt=totals(list);
     h+=`<div class="card meal-card mc-${m}"><div class="meal-h"><h3><span class="meal-ic">${MEAL_IC[m]}</span>${m}</h3><span class="num mk">${list.length?fint(mt.kcal)+' kcal':''}</span></div>`;
